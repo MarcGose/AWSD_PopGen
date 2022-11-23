@@ -1,0 +1,203 @@
+### Workflow for SNP filtering, LD and relatedness analysis ###
+
+# These steps were performed interactively on a node of the University of Edinburgh's HPC Cluster "EDDIE"
+
+		#######################
+		#### Data wrangling ###
+		#######################
+
+# Load PLINK
+
+module load module load igmm/apps/plink/1.09
+
+pwd
+
+/exports/cmvm/eddie/eb/groups/ogden_grp/marc/wsd_dart_2021/data/out/angsd/final
+
+# Recode ANGSD output using .tped and .tfam as input
+
+plink
+	--tfile WSD_GLs /
+	--recode /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+# Generate .bim .bed .fam files
+
+plink
+	--file WSD_GLs /
+	--make-bed /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+# Make directory for further analysis and move files
+
+mkdir PLINK
+
+mv WSD_GLs.* PLINK/
+
+# Copy .beagle and .mafs file for ngsLD
+
+cp WSD_GLs.beagle.gz WSD_GLs.mafs.gz PLINK/
+
+cd PLINK/
+
+# Remove header and first two columns of .mafs file and write into position file
+
+zcat WSD_GLs.mafs.gz | cut -f1,2 | gzip > WSD_GLs.pos.gz
+
+## gunzip, remove header manually and gzip ##
+
+		################
+		#### ngsLD #####
+		################
+
+# Run NGSld
+
+/exports/cmvm/eddie/eb/groups/ogden_grp/software/ngsTools/ngsLD/ngsLD --geno WSD_GLs.beagle.gz --pos WSD_GLs.pos.gz --probs --n_ind 86 --n_sites 3259 --out WSD_GLs.ld
+
+# Prune sites
+
+/exports/cmvm/eddie/eb/groups/ogden_grp/software/ngsTools/ngsLD/prune_graph.pl
+
+# Plot LD decay
+
+module load igmm/apps/R/4.1.3 #needs to be this version!
+
+ls WSD_GLs.ld | Rscript /
+			--vanilla /
+			--slave fit_LDdecay.R /
+			--ld r2 /
+			--n_ind 86 /
+			--max_kb_dist 200 /
+			--fit_boot 100 /
+			--fit_bin_size 1000 /
+			--fit_level 100 /
+			--plot_data /
+			--plot_scale 3 /
+			--out plot.pdf
+
+# Replace ':' delimiter with 'TAB' to generate a readable snplist for PLINK
+
+sed 's/:/_/1' pruned_sites.id > WSD_GLs.snplist
+
+		#######################
+		#### SNP filtering ####
+		#######################
+
+# Filter for MAF and genotyping rate and overwrite snplist
+
+plink
+	--file WSD_GLs /
+	--maf 0.01 /
+	--geno 0.2 /
+	--write-snplist /
+	--allow-no-sex /
+	--noweb
+	--out WSD_GLs
+
+# Remove all markers on Chromosome 22
+
+sed '/^HiC_scaffold_22/d' WSD_GLs2.snplist > WSD_GLs.snplist
+
+## Manually remove all markers not mapped to Chr 1-21 ##
+
+# generate some sumstats
+
+# Missing data
+
+plink 
+	--file WSD_GLs /
+	--missing /
+	--extract WSD_GLs.snplist /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+# Hwe proportions
+
+plink 
+	--file WSD_GLs /
+	--hardy /
+	--extract WSD_GLs.snplist /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+# Allele frequencies
+
+plink 
+	--file WSD_GLs /
+	--freq /
+	--extract WSD_GLs.snplist /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+# Write VCF file
+
+plink
+	--tfile WSD_GLs /
+	--recode vcf-fid /
+	--extract WSD_GLs.snplist /
+	--allow-extra-chr /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+		###################
+		### Relatedness ###
+		###################
+
+# Run NGSrelate on .vcf
+
+/exports/cmvm/eddie/eb/groups/ogden_grp/software/ngsRelate/ngsRelate -h WSD_GLs.vcf -T GT -O WSD_NGSrelate.res -c 1
+
+# Generate IBD
+
+plink 
+	--file WSD_GLs /
+	--genome /
+	--extract WSD_GLs.snplist /
+	--noweb /
+	--allow-no-sex /
+	--out WSD_GLs
+
+## Move .res and .genome to local mashine and run R script XXX to plot R1 vs. KING
+
+		####################
+		#### Inbreeding ####
+		####################
+
+# Generate IBC and heterozygosities and .raw file
+
+plink 
+	--bfile WSD_GLs /
+	--ibc /
+	--extract WSD_GLs.snplist /
+	--allow-no-sex /
+	--noweb /
+	--thread-num 4 /
+	--out WSD_GLs
+
+plink 
+	--bfile WSD_calledSNPs /
+	--het /
+	--extract WSD_GLs.snplist /
+	--allow-no-sex /
+	--noweb /
+	--thread-num 4 /
+	--out WSD_GLs
+
+plink 
+	--bfile WSD_calledSNPs /
+	--recode-AD /
+	--extract WSD_GLs.snplist /
+	--allow-no-sex /
+	--noweb /
+	--thread-num 4 /
+	--out WSD_GLs
+
+## Move .ibc and .raw . het and .vcf to local mashine and run R script XXX to plot sMLH and Fhat2 distributions and per-region using InbreedR
