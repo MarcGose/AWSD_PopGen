@@ -165,7 +165,7 @@ plink
 	--allow-no-sex /
 	--out WSD_GLs
 
-## Move .res and .genome to local mashine and run R script XXX to plot R1 vs. KING
+## Move .res and .genome to local mashine and run R script 3.6_Relatedness.R to plot R1 vs. KING
 
 		####################
 		#### Inbreeding ####
@@ -200,4 +200,4 @@ plink
 	--thread-num 4 /
 	--out WSD_GLs
 
-## Move .ibc and .raw . het and .vcf to local mashine and run R script XXX to plot sMLH and Fhat2 distributions and per-region using InbreedR
+## Move .ibc and .raw . het and .vcf to local mashine and run R script 3.7_Diversity&Inbreeding.R to plot sMLH and Fhat2 distributions and per-region using InbreedR
