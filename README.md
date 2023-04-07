@@ -9,7 +9,7 @@ Some functions of the PLINK package, NGSrelate, NGSld and some data wrangling st
 
 The reference assembly used for mapping and representation of a western North Atlantic individual in the dataset can be found here: https://www.dnazoo.org/assemblies/Lagenorhynchus_acutus
 
-Manuscript "Stranding collections uncover broad-scale connectivity in a pelagic marine predator, the Atlantic white‑sided dolphin (Lagenorhynchus acutus)" currently under revision.
+Manuscript "Stranding collections uncover broad-scale connectivity in a pelagic marine predator, the Atlantic white‑sided dolphin (Lagenorhynchus acutus)" is available here: https://tinyurl.com/4snpphjt
 
 M.Sc. Marc-Alexander Gose
 Ph.D. candidate in conservation genetics
